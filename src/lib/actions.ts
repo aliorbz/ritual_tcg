@@ -3,15 +3,50 @@
 import { auth } from "@/auth";
 import { DISCORD_CONFIG } from "@/lib/config";
 
+type DiscordGuild = {
+  id: string;
+};
+
+type DiscordGuildMember = {
+  roles?: string[];
+  user?: {
+    username?: string;
+  };
+};
+
+type RitualSession = {
+  accessToken?: string;
+  user?: {
+    name?: string | null;
+    image?: string | null;
+  };
+};
+
+type DiscordRole = {
+  id: string;
+  type: string;
+  name: string;
+};
+
+type DiscordStats = {
+  messages: string;
+  joins: string;
+  activity: string;
+};
+
+type MockRole = DiscordRole & {
+  stats: DiscordStats;
+};
+
 export async function getDiscordUserRoles() {
-  const session = await auth() as any;
+  const session = await auth() as RitualSession | null;
   
   if (!session || !session.accessToken) {
     return { error: "Not authenticated" };
   }
 
   try {
-    // 1. Get user's guilds
+    // 1. Check only whether the user is in the Ritual server.
     const response = await fetch("https://discord.com/api/users/@me/guilds", {
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
@@ -19,11 +54,12 @@ export async function getDiscordUserRoles() {
     });
 
     if (!response.ok) throw new Error("Failed to fetch guilds");
-    const guilds = await response.json();
+    const guilds = await response.json() as DiscordGuild[];
 
-    const ritualGuild = guilds.find((g: any) => g.id === DISCORD_CONFIG.serverId);
+    const isRitualMember = guilds.some((guild) => guild.id === DISCORD_CONFIG.serverId);
+    guilds.length = 0;
     
-    if (!ritualGuild) {
+    if (!isRitualMember) {
       return { 
         role: { id: "seeker", type: "seeker", name: "Seeker" },
         username: session.user?.name,
@@ -54,9 +90,11 @@ export async function getDiscordUserRoles() {
       };
     }
 
-    const memberData = await memberResponse.json();
-    const roles = memberData.roles as string[];
+    const memberData = await memberResponse.json() as DiscordGuildMember;
+    const roles = [...(memberData.roles || [])];
     const trueUsername = memberData.user?.username || session.user?.name;
+    memberData.roles = [];
+    memberData.user = undefined;
 
     // 3. Determine highest role
     const rolePriority = [
@@ -69,8 +107,9 @@ export async function getDiscordUserRoles() {
 
     const highestRole = rolePriority.find(rp => roles.includes(rp.id));
     const resolvedRole = highestRole || { id: "seeker", type: "seeker", name: "Seeker" };
+    roles.length = 0;
 
-    const mockStats: Record<string, any> = {
+    const mockStats: Record<string, DiscordStats> = {
       mod: { messages: "5.4k", joins: "Jan 2024", activity: "Master" },
       raiden: { messages: "1.2k", joins: "Feb 2024", activity: "Legendary" },
       ritualist: { messages: "450", joins: "May 2024", activity: "High" },
@@ -100,7 +139,7 @@ export async function getDiscordUserRoles() {
 
 // Mock function for development
 export async function getMockUserRoles(roleType: string = "ritualist") {
-  const roleMap: Record<string, any> = {
+  const roleMap: Record<string, MockRole> = {
     mod: { id: DISCORD_CONFIG.roles.mod, type: "mod", name: "Mod", stats: { messages: "5.4k", joins: "Jan 2024", activity: "Master" } },
     raiden: { id: DISCORD_CONFIG.roles.raiden, type: "raiden", name: "Radiant Ritualist", stats: { messages: "1.2k", joins: "Feb 2024", activity: "Legendary" } },
     ritualist: { id: DISCORD_CONFIG.roles.ritualist, type: "ritualist", name: "Ritualist", stats: { messages: "450", joins: "May 2024", activity: "High" } },

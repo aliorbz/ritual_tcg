@@ -46,6 +46,35 @@ const VerifiedRosette = ({ size = 28, color = "currentColor" }: { size?: number;
   </svg>
 );
 
+const DiscordPermissionPreview = () => (
+  <div className="w-full space-y-3 mb-8 text-left">
+    <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <CheckCircle2 className="mt-0.5 text-emerald-400 shrink-0" size={18} />
+      <div>
+        <p className="text-sm font-black text-white">Retrieve profile details for card generation</p>
+        <p className="text-xs text-white/45 font-sans mt-1">
+          Used to access your Discord username and avatar for TCG generation
+        </p>
+      </div>
+    </div>
+    <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      <ShieldCheck className="mt-0.5 text-[#5865F2] shrink-0" size={18} />
+      <div>
+        <p className="text-sm font-black text-white">Verify your Ritual community role</p>
+        <p className="text-xs text-white/45 font-sans mt-1">
+          Used to verify your Ritual server membership and role
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const DiscordTrustNote = () => (
+  <p className="text-xs text-white/40 leading-relaxed font-sans mt-4 max-w-md">
+    We only use your Discord profile and Ritual role to generate your Ritual TCG card. We do not access messages, passwords, or send actions on your behalf.
+  </p>
+);
+
 // Setup dynamic client for metadata setup
 const RITUAL_CHAIN = {
   id: RITUAL_NETWORK.id,
@@ -355,12 +384,17 @@ export default function ProfilePage() {
           {/* Connect / Disconnect Buttons */}
           <div className="flex items-center gap-3">
             {!activeSession ? (
-              <button
-                onClick={() => signIn("discord")}
-                className="px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl font-black transition-all text-sm flex items-center gap-2 shadow-lg shadow-blue-500/10"
-              >
-                Connect Discord
-              </button>
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={() => signIn("discord")}
+                  className="px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl font-black transition-all text-sm flex items-center gap-2 shadow-lg shadow-blue-500/10"
+                >
+                  Connect Discord
+                </button>
+                <p className="hidden md:block text-[11px] text-white/35 mt-2 max-w-xs text-right font-sans">
+                  Uses only your Discord profile and Ritual role for card generation.
+                </p>
+              </div>
             ) : (
               <button
                 onClick={() => signOut()}
@@ -408,7 +442,7 @@ export default function ProfilePage() {
             >
               <div className="text-center mb-16 max-w-xl">
                 <h2 className="text-4xl font-black mb-4 uppercase tracking-tighter">Mint TCG Card</h2>
-                <p className="text-white/40 leading-relaxed font-medium font-sans text-sm">Verify your live Ritual guild roles and mint your custom card. Once minted, you can customize your layout from the details page.</p>
+                <p className="text-white/40 leading-relaxed font-medium font-sans text-sm">Verify your Ritual community role and mint your custom card. Once minted, you can customize your layout from the details page.</p>
               </div>
 
               {!activeSession ? (
@@ -418,7 +452,8 @@ export default function ProfilePage() {
                       <User className="text-[#5865F2]" size={36} />
                     </div>
                     <h2 className="text-2xl font-black mb-4">Connect Discord</h2>
-                    <p className="text-white/40 mb-10 leading-relaxed font-sans text-sm">Please link your verified Discord account to sync your role and stats.</p>
+                    <p className="text-white/40 mb-8 leading-relaxed font-sans text-sm">Please link your Discord account to generate your card from your profile and Ritual role.</p>
+                    <DiscordPermissionPreview />
                     
                     <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
                       <button
@@ -428,6 +463,7 @@ export default function ProfilePage() {
                         Connect Discord
                       </button>
                     </div>
+                    <DiscordTrustNote />
                   </div>
                 </div>
               ) : (
