@@ -279,8 +279,8 @@ function OwnedCardItem({ token, address, onRefresh }: { token: any; address: str
   });
   const offerers = (offerersData as string[] | undefined) || [];
 
-  const roleType = (metadata?.discordRole || token.discordRole || "ritualist").toLowerCase();
-  const colors = (ROLE_COLORS as any)[roleType] || ROLE_COLORS.ritualist;
+  const roleType = (metadata?.discordRole || token.discordRole || "seeker").toLowerCase();
+  const colors = (ROLE_COLORS as any)[roleType] || ROLE_COLORS.seeker;
 
   const handleCancelListing = () => {
     if (!listingId || listingId === BigInt(0)) return;
@@ -304,7 +304,7 @@ function OwnedCardItem({ token, address, onRefresh }: { token: any; address: str
             <CardPreview
               username={metadata?.name || token.discordUsername}
               avatar={metadata?.image || `https://cdn.discordapp.com/embed/avatars/${parseInt(token.discordId || "0") % 6}.png`}
-              role={{ type: roleType, name: metadata?.discordRole || token.discordRole || "Ritualist" }}
+              role={{ type: roleType, name: metadata?.discordRole || token.discordRole || "Seeker" }}
               walletAddress={address as `0x${string}`}
               tokenId={token.tokenId}
               stats={metadata?.traits || { messages: "0", level: "1", activity: "New" }}

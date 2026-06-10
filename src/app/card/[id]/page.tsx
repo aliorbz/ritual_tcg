@@ -69,8 +69,8 @@ const VerifiedRosette = ({ size = 28, color = "currentColor" }: { size?: number;
 );
 
 function roleColors(role?: string) {
-  const roleType = (role || "ritualist").toLowerCase();
-  return (ROLE_COLORS as any)[roleType] || ROLE_COLORS.ritualist;
+  const roleType = (role || "seeker").toLowerCase();
+  return (ROLE_COLORS as any)[roleType] || ROLE_COLORS.seeker;
 }
 
 export default function CardDetails() {
@@ -496,6 +496,7 @@ export default function CardDetails() {
         abi: CONTRACTS.NFT.abi,
         functionName: "updateCardData",
         args: [BigInt(id), newRole, newUsername],
+        gas: BigInt(150000),
       });
 
       setSyncStep("metadata");
@@ -576,10 +577,10 @@ export default function CardDetails() {
                 <CardPreview
                   tokenId={id}
                   role={{ 
-                    type: metadata?.discordRole || "ritualist", 
-                    name: metadata?.discordRole || "Ritualist" 
+                    type: metadata?.discordRole || "seeker", 
+                    name: metadata?.discordRole || "Seeker" 
                   }}
-                  username={metadata?.name || "Ritualist"}
+                  username={metadata?.name || "Ritual Explorer"}
                   avatar={metadata?.image || ""}
                   stats={metadata?.traits || { messages: "0", level: "1", activity: "New" }}
                   walletAddress={owner}
@@ -842,9 +843,9 @@ export default function CardDetails() {
                       
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-sans">
                         {[
-                          { title: "Rarity Tier", val: metadata?.discordRole || "Bitty", glow: true },
+                          { title: "Rarity Tier", val: metadata?.discordRole || "Seeker", glow: true },
                           { title: "Ver. Username", val: `@${metadata?.discordUsername || "user"}` },
-                          { title: "Top Server Role", val: metadata?.discordRole || "Bitty" },
+                          { title: "Top Server Role", val: metadata?.discordRole || "Seeker" },
                           { title: "Card Ledger ID", val: `#${id}`, glow: true }
                         ].map((item, idx) => (
                           <div key={idx} className="p-4.5 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-1 hover:border-white/10 transition-all">

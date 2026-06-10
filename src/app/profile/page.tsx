@@ -111,8 +111,9 @@ export default function ProfilePage() {
     }
   }, []);
 
-  const roleType = userData?.role?.type || "ritualist";
-  const colors = (ROLE_COLORS as any)[roleType] || ROLE_COLORS.ritualist;
+  const verifiedRole = userData?.role && !userData?.ineligible ? userData.role : { type: "seeker", name: "Seeker" };
+  const roleType = verifiedRole.type;
+  const colors = (ROLE_COLORS as any)[roleType] || ROLE_COLORS.seeker;
   const [isRoleLoading, setIsRoleLoading] = React.useState(false);
   const [customImage, setCustomImage] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -124,7 +125,7 @@ export default function ProfilePage() {
 
   // ─── Track global user mint limit (exactly 1 card per Discord account) ───
   const discordId = activeSession?.user?.id || (activeSession ? "mock-discord-id-123" : "");
-  const currentRoleName = userData?.role?.name || "Ritualist";
+  const currentRoleName = verifiedRole.name;
   
   const { data: hasMintedData, refetch: refetchHasMinted } = useReadContract({
     address: CONTRACTS.NFT.address,
@@ -146,7 +147,7 @@ export default function ProfilePage() {
   // Intercept successful mint to write metadata JSON
   React.useEffect(() => {
     async function initializeMetadata() {
-      if (isConfirmed && userData && activeSession && address) {
+      if (isConfirmed && userData?.role && activeSession && address) {
         refetchHasMinted();
         const client = getClient();
         try {
@@ -167,7 +168,7 @@ export default function ProfilePage() {
             
             const defaultMeta = {
               tokenId: tokenId.toString(),
-              name: activeSession.user?.name || "Ritualist",
+              name: activeSession.user?.name || "Ritual Explorer",
               description: `A unique collectible card from the Ritual TCG ecosystem. This card represents your verified role (${userData.role.name}) and contribution to the network.`,
               image: customImage || getHighResDiscordUrl(activeSession.user?.image) || `https://cdn.discordapp.com/embed/avatars/${parseInt(discordId || "0") % 6}.png`,
               discordId,
@@ -201,7 +202,10 @@ export default function ProfilePage() {
   }, [isConfirmed, userData, activeSession, address, discordId, customImage, refetchHasMinted]);
 
   const handleMint = async () => {
-    if (!address || !userData || !activeSession) return;
+    if (!address || !userData?.role || !activeSession) {
+      setMintError("Please wait for Discord role verification before minting.");
+      return;
+    }
     setMintError(null);
     try {
       writeContract({
@@ -277,6 +281,7 @@ export default function ProfilePage() {
     if (isConfirming) return "Minting on Chain...";
     if (isConfirmed) return "✅ Successfully Minted!";
     if (hasMinted) return "Role Already Minted";
+    if (!userData?.role) return "Verify Discord";
     return "Mint TCG";
   };
 
@@ -366,14 +371,14 @@ export default function ProfilePage() {
                 <div
                   className="px-3 py-1 rounded-lg border transition-all"
                   style={{
-                    backgroundColor: isRoleLoading ? "rgba(255,255,255,0.05)" : (ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.bg,
-                    borderColor: isRoleLoading ? "rgba(255,255,255,0.1)" : (ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.border
+                    backgroundColor: isRoleLoading ? "rgba(255,255,255,0.05)" : colors.bg,
+                    borderColor: isRoleLoading ? "rgba(255,255,255,0.1)" : colors.border
                   }}
                 >
                   <span
-                    className={`text-[10px] font-black uppercase tracking-[0.2em] ${(ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.text || "text-white"}`}
+                    className={`text-[10px] font-black uppercase tracking-[0.2em] ${colors.text || "text-white"}`}
                   >
-                    {isRoleLoading ? "Syncing..." : (userData?.role?.name || "Ritualist")}
+                    {isRoleLoading ? "Syncing..." : currentRoleName}
                   </span>
                 </div>
                 {activeSession && !isRoleLoading && <ShieldCheck className="text-blue-500" size={18} />}
@@ -471,11 +476,11 @@ export default function ProfilePage() {
                   {/* Left: Card Preview */}
                   <div className="flex-1 flex justify-center lg:justify-end">
                     <CardPreview
-                      username={activeSession.user?.name || "Ritualist"}
+                      username={activeSession.user?.name || "Seeker"}
                       avatar={customImage || activeSession.user?.image || ""}
-                      role={userData?.role || { type: "ritualist", name: "Ritualist" }}
+                      role={verifiedRole}
                       walletAddress={address}
-                      stats={userData?.stats || { messages: "---", joins: "---", activity: "---" }}
+                      stats={userData?.stats || { messages: "0", level: "1", joins: "New", activity: "None" }}
                       insideCardPage={true}
                     />
                   </div>
@@ -484,8 +489,8 @@ export default function ProfilePage() {
                   <div className="flex-1 flex flex-col justify-center items-center lg:items-start text-center lg:text-left pt-4">
                     {/* Top Verified Tag */}
                     <div className="flex items-center gap-1.5 mb-2">
-                      <ShieldCheck size={14} className={(ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.text || "text-blue-500"} />
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${(ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.text || "text-blue-500"} font-sans`}>
+                      <ShieldCheck size={14} className={colors.text || "text-blue-500"} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${colors.text || "text-blue-500"} font-sans`}>
                         Ritual Verified
                       </span>
                     </div>
@@ -510,7 +515,7 @@ export default function ProfilePage() {
                         {/* Tooltip Content */}
                         <div className="absolute bottom-full mb-3 right-1/2 translate-x-1/2 pointer-events-none opacity-0 group-hover/tooltip:opacity-100 transition-all duration-300 transform translate-y-1 group-hover/tooltip:translate-y-0 z-50">
                           <div className="bg-[#181818] border border-white/10 text-white text-xs font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-xl shadow-2xl whitespace-nowrap">
-                            {userData?.role?.name || "Ritualist"}
+                            {currentRoleName}
                           </div>
                           <div className="w-2.5 h-2.5 bg-[#181818] border-r border-b border-white/10 rotate-45 mx-auto -mt-1.5" />
                         </div>
@@ -519,8 +524,8 @@ export default function ProfilePage() {
 
                     {/* Sub-info */}
                     <div className="flex items-center gap-4 text-sm font-bold mb-10 font-sans">
-                      <span className="text-white/40">Discord: <span className={(ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.text || "text-blue-500"}>@{userData?.trueUsername || (activeSession.user?.name || "user").toLowerCase().replace(/\s+/g, '')}</span></span>
-                      <span className="text-white/40">Address: <span className={(ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.text || "text-blue-500"}>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x..."}</span></span>
+                      <span className="text-white/40">Discord: <span className={colors.text || "text-blue-500"}>@{userData?.trueUsername || (activeSession.user?.name || "user").toLowerCase().replace(/\s+/g, '')}</span></span>
+                      <span className="text-white/40">Address: <span className={colors.text || "text-blue-500"}>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x..."}</span></span>
                     </div>
 
                     {/* Already minted banner */}
@@ -536,12 +541,12 @@ export default function ProfilePage() {
 
                     {/* Mint Button */}
                     <button
-                      disabled={isRoleLoading || isPending || isConfirming || hasMinted}
+                      disabled={isRoleLoading || isPending || isConfirming || hasMinted || !userData?.role}
                       onClick={handleMint}
                       className="w-full max-w-sm py-5 rounded-[20px] font-black text-2xl uppercase tracking-tighter transition-all active:scale-95 flex items-center justify-center gap-3 text-black hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
-                        backgroundColor: (ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.primary || "#3b82f6",
-                        boxShadow: `0 10px 30px -10px ${(ROLE_COLORS as any)[userData?.role?.type || "ritualist"]?.primary || "#3b82f6"}`
+                        backgroundColor: colors.primary || "#94A3B8",
+                        boxShadow: `0 10px 30px -10px ${colors.primary || "#94A3B8"}`
                       }}
                     >
                       {getMintLabel()}

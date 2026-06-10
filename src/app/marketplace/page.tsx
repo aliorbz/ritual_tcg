@@ -66,8 +66,8 @@ type MintedCard = {
 
 // Helper to resolve role color styles
 function roleColors(role?: string) {
-  const roleType = (role || "ritualist").toLowerCase();
-  return (ROLE_COLORS as any)[roleType] || ROLE_COLORS.ritualist;
+  const roleType = (role || "seeker").toLowerCase();
+  return (ROLE_COLORS as any)[roleType] || ROLE_COLORS.seeker;
 }
 
 // ─── MarketCard Type ────────────────────────────────────────────────
@@ -104,10 +104,10 @@ function MarketCardItem({ card, onBuy, onOffer, onList, onCancelListing, current
         <CardPreview
           tokenId={card.tokenId.toString()}
           role={{ 
-            type: card.cardMeta?.discordRole || "ritualist", 
-            name: card.cardMeta?.discordRole || "Ritualist" 
+            type: card.cardMeta?.discordRole || "seeker", 
+            name: card.cardMeta?.discordRole || "Seeker" 
           }}
-          username={card.cardMeta?.discordUsername || "Ritualist"}
+          username={card.cardMeta?.discordUsername || "Ritual Explorer"}
           avatar={card.cardMeta?.image || ""}
           stats={card.cardMeta?.traits || { messages: "0", level: "1", activity: "New" }}
           isCompact={isCompact}

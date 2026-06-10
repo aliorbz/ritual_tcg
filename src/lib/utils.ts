@@ -7,7 +7,7 @@ export const getRoleColors = (role: string) => {
   if (r.includes('ritualist')) return ROLE_COLORS.ritualist;
   if (r.includes('ritty')) return ROLE_COLORS.ritty;
   if (r.includes('bitty')) return ROLE_COLORS.bitty;
-  return ROLE_COLORS.ritualist;
+  return ROLE_COLORS.seeker;
 };
 
 export function getHighResDiscordUrl(url: string | null | undefined): string {
@@ -23,4 +23,3 @@ export function getHighResDiscordUrl(url: string | null | undefined): string {
   }
   return url;
 }
-

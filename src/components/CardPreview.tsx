@@ -9,7 +9,7 @@ interface CardPreviewProps {
   role: { type: string, name: string };
   username: string;
   avatar: string;
-  stats?: { messages: string, joins: string, activity: string };
+  stats?: { messages: string, level?: string, joins?: string, activity: string };
   walletAddress?: string;
   tokenId?: string;
   children?: React.ReactNode;
@@ -19,8 +19,8 @@ interface CardPreviewProps {
 
 export function CardPreview({ role, username, avatar, stats, walletAddress, tokenId, children, insideCardPage = false, isCompact = false }: CardPreviewProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const roleType = (role?.type || "ritualist").toLowerCase();
-  const colors = (ROLE_COLORS as any)[roleType] || ROLE_COLORS.ritualist;
+  const roleType = (role?.type || "seeker").toLowerCase();
+  const colors = (ROLE_COLORS as any)[roleType] || ROLE_COLORS.seeker;
   const isRadiant = roleType === "raiden" || roleType === "radiant";
 
   // Normalize stats to handle both Discord API and DB keys
@@ -112,7 +112,7 @@ export function CardPreview({ role, username, avatar, stats, walletAddress, toke
                   }`}
                   style={{ backgroundImage: colors.gradient }}
                 >
-                  {username || "Ritualist"}
+                  {username || "Ritual Explorer"}
                 </h3>
               ) : (
                 <h3 
@@ -121,7 +121,7 @@ export function CardPreview({ role, username, avatar, stats, walletAddress, toke
                   }`}
                   style={{ color: colors.primary }}
                 >
-                  {username || "Ritualist"}
+                  {username || "Ritual Explorer"}
                 </h3>
               )}
             </div>
