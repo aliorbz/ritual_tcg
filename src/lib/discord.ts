@@ -3,8 +3,8 @@ import { DISCORD_CONFIG } from "./config";
 export async function getUserRoles(discordId: string) {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token) {
-    console.warn("DISCORD_BOT_TOKEN not found. Returning default role.");
-    return ["Ritualist"];
+    console.warn("DISCORD_BOT_TOKEN not found. Skipping live Discord role lookup.");
+    return null;
   }
 
   try {
@@ -18,7 +18,7 @@ export async function getUserRoles(discordId: string) {
       }
     );
 
-    if (!response.ok) return ["Ritualist"];
+    if (!response.ok) return null;
 
     const data = await response.json();
     const userRoles = data.roles as string[];
@@ -39,9 +39,9 @@ export async function getUserRoles(discordId: string) {
       }
     });
 
-    return roleNames.length > 0 ? roleNames : ["Ritualist"];
+    return roleNames.length > 0 ? roleNames : ["Seeker"];
   } catch (error) {
     console.error("Error fetching Discord roles:", error);
-    return ["Ritualist"];
+    return null;
   }
 }

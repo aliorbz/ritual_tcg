@@ -7,6 +7,7 @@ import { createPublicClient, http } from "viem";
 import { RITUAL_NETWORK, CONTRACTS } from "@/lib/config";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { getHighResDiscordUrl } from "@/lib/utils";
+import { getUserRoles } from "@/lib/discord";
 
 // Setup filesystem directory
 const METADATA_DIR = path.join(process.cwd(), "src", "data", "metadata");
@@ -62,6 +63,14 @@ const roleStats: Record<string, { messages: string; level: string; activity: str
   seeker: { messages: "0", level: "1", activity: "None", joins: "New" },
 };
 
+const rolePriority = [
+  { type: "mod", name: "Mod" },
+  { type: "raiden", name: "Radiant Ritualist" },
+  { type: "ritualist", name: "Ritualist" },
+  { type: "ritty", name: "Ritty" },
+  { type: "bitty", name: "Bitty" },
+];
+
 async function readChainCardMetadata(id: string): Promise<ChainCardMetadata | null> {
   const client = getViemClient();
   const rawMeta = await client.readContract({
@@ -91,31 +100,38 @@ async function readChainCardMetadata(id: string): Promise<ChainCardMetadata | nu
   return { discordId, discordRole, discordUsername };
 }
 
-async function withLatestChainRole(id: string, metadata: StoredMetadata) {
+async function withVerifiedDiscordRole(id: string, metadata: StoredMetadata) {
   try {
     const chainMeta = await readChainCardMetadata(id);
     if (!chainMeta) return metadata;
 
-    const roleType = (chainMeta.discordRole || "seeker").toLowerCase();
+    const liveRoles = await getUserRoles(chainMeta.discordId);
+    if (!liveRoles) return metadata;
+
+    const verifiedRole = rolePriority.find((role) => liveRoles.includes(role.type)) || {
+      type: "seeker",
+      name: "Seeker",
+    };
+    const roleType = verifiedRole.type;
     const stats = roleStats[roleType] || roleStats.seeker;
     const oldUsername = metadata.discordUsername;
 
     return {
       ...metadata,
       discordId: chainMeta.discordId,
-      discordRole: chainMeta.discordRole,
+      discordRole: verifiedRole.name,
       discordUsername: chainMeta.discordUsername,
       name: !metadata.name || metadata.name === oldUsername ? chainMeta.discordUsername : metadata.name,
       traits: {
         ...metadata.traits,
-        messageCount: metadata.traits?.messageCount || stats.messages,
-        level: metadata.traits?.level || stats.level,
-        topRole: chainMeta.discordRole,
-        activity: metadata.traits?.activity || stats.activity,
+        messageCount: stats.messages,
+        level: stats.level,
+        topRole: verifiedRole.name,
+        activity: stats.activity,
       },
     };
   } catch (err) {
-    console.error("On-chain metadata reconciliation failed:", err);
+    console.error("Live Discord metadata reconciliation failed:", err);
     return metadata;
   }
 }
@@ -145,7 +161,7 @@ export async function GET(
         .single();
         
       if (!error && data && data.metadata) {
-        return NextResponse.json(await withLatestChainRole(id, data.metadata));
+        return NextResponse.json(await withVerifiedDiscordRole(id, data.metadata));
       }
     } catch (sbErr) {
       console.error("Supabase read failed:", sbErr);
@@ -158,7 +174,7 @@ export async function GET(
     if (res.ok) {
       const val = await res.json();
       if (val && typeof val === "object" && val.name) {
-        return NextResponse.json(await withLatestChainRole(id, val));
+        return NextResponse.json(await withVerifiedDiscordRole(id, val));
       }
     }
   } catch (kvErr) {
@@ -169,7 +185,7 @@ export async function GET(
     await ensureDirectoryExists();
     // 3. Try to read from local JSON database (development mode backup)
     const fileContent = await fs.readFile(filePath, "utf-8");
-    return NextResponse.json(await withLatestChainRole(id, JSON.parse(fileContent)));
+    return NextResponse.json(await withVerifiedDiscordRole(id, JSON.parse(fileContent)));
   } catch (err) {
     // 4. Fallback: Query the blockchain
     try {
@@ -179,14 +195,19 @@ export async function GET(
         return NextResponse.json({ error: "Token not found" }, { status: 404 });
       }
 
-      const { discordId, discordRole, discordUsername } = chainMeta;
+      const { discordId, discordUsername } = chainMeta;
 
       if (!discordId) {
         return NextResponse.json({ error: "Token has no metadata" }, { status: 404 });
       }
 
-      const roleType = (discordRole || "ritualist").toLowerCase();
-      const stats = roleStats[roleType] || roleStats.ritualist;
+      const liveRoles = await getUserRoles(discordId);
+      const verifiedRole = liveRoles
+        ? rolePriority.find((role) => liveRoles.includes(role.type)) || { type: "seeker", name: "Seeker" }
+        : { type: (chainMeta.discordRole || "seeker").toLowerCase(), name: chainMeta.discordRole || "Seeker" };
+      const discordRole = verifiedRole.name;
+      const roleType = verifiedRole.type;
+      const stats = roleStats[roleType] || roleStats.seeker;
 
       // Construct a default metadata structure mirroring Discord identity
       const defaultMeta = {
