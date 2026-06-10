@@ -30,6 +30,7 @@ type DiscordRole = {
 
 type DiscordStats = {
   messages: string;
+  level: string;
   joins: string;
   activity: string;
 };
@@ -65,7 +66,7 @@ export async function getDiscordUserRoles() {
         username: session.user?.name,
         trueUsername: session.user?.name,
         avatar: session.user?.image,
-        stats: { messages: "0", joins: "New", activity: "None" }
+        stats: { messages: "0", level: "1", joins: "New", activity: "None" }
       };
     }
 
@@ -82,11 +83,7 @@ export async function getDiscordUserRoles() {
 
     if (!memberResponse.ok) {
       return { 
-        role: { id: "seeker", type: "seeker", name: "Seeker" },
-        username: session.user?.name,
-        trueUsername: session.user?.name,
-        avatar: session.user?.image,
-        stats: { messages: "0", joins: "New", activity: "None" }
+        error: "Unable to verify your Ritual server role. Please reconnect Discord and try again."
       };
     }
 
@@ -110,12 +107,12 @@ export async function getDiscordUserRoles() {
     roles.length = 0;
 
     const mockStats: Record<string, DiscordStats> = {
-      mod: { messages: "5.4k", joins: "Jan 2024", activity: "Master" },
-      raiden: { messages: "1.2k", joins: "Feb 2024", activity: "Legendary" },
-      ritualist: { messages: "450", joins: "May 2024", activity: "High" },
-      ritty: { messages: "120", joins: "Aug 2024", activity: "Medium" },
-      bitty: { messages: "45", joins: "Oct 2024", activity: "Low" },
-      seeker: { messages: "0", joins: "New", activity: "None" },
+      mod: { messages: "5.4k", level: "50", joins: "Jan 2024", activity: "Master" },
+      raiden: { messages: "1.2k", level: "25", joins: "Feb 2024", activity: "Legendary" },
+      ritualist: { messages: "450", level: "10", joins: "May 2024", activity: "High" },
+      ritty: { messages: "120", level: "3", joins: "Aug 2024", activity: "Medium" },
+      bitty: { messages: "45", level: "1", joins: "Oct 2024", activity: "Low" },
+      seeker: { messages: "0", level: "1", joins: "New", activity: "None" },
     };
 
     return { 
@@ -128,11 +125,7 @@ export async function getDiscordUserRoles() {
   } catch (err) {
     console.error(err);
     return { 
-      role: { id: "seeker", type: "seeker", name: "Seeker" },
-      username: session?.user?.name || "Explorer",
-      trueUsername: session?.user?.name || "explorer",
-      avatar: session?.user?.image,
-      stats: { messages: "0", joins: "New", activity: "None" }
+      error: "Unable to verify your Ritual server role. Please reconnect Discord and try again."
     };
   }
 }
@@ -140,11 +133,11 @@ export async function getDiscordUserRoles() {
 // Mock function for development
 export async function getMockUserRoles(roleType: string = "ritualist") {
   const roleMap: Record<string, MockRole> = {
-    mod: { id: DISCORD_CONFIG.roles.mod, type: "mod", name: "Mod", stats: { messages: "5.4k", joins: "Jan 2024", activity: "Master" } },
-    raiden: { id: DISCORD_CONFIG.roles.raiden, type: "raiden", name: "Radiant Ritualist", stats: { messages: "1.2k", joins: "Feb 2024", activity: "Legendary" } },
-    ritualist: { id: DISCORD_CONFIG.roles.ritualist, type: "ritualist", name: "Ritualist", stats: { messages: "450", joins: "May 2024", activity: "High" } },
-    ritty: { id: DISCORD_CONFIG.roles.ritty, type: "ritty", name: "Ritty", stats: { messages: "120", joins: "Aug 2024", activity: "Medium" } },
-    bitty: { id: DISCORD_CONFIG.roles.bitty, type: "bitty", name: "Bitty", stats: { messages: "45", joins: "Oct 2024", activity: "Low" } },
+    mod: { id: DISCORD_CONFIG.roles.mod, type: "mod", name: "Mod", stats: { messages: "5.4k", level: "50", joins: "Jan 2024", activity: "Master" } },
+    raiden: { id: DISCORD_CONFIG.roles.raiden, type: "raiden", name: "Radiant Ritualist", stats: { messages: "1.2k", level: "25", joins: "Feb 2024", activity: "Legendary" } },
+    ritualist: { id: DISCORD_CONFIG.roles.ritualist, type: "ritualist", name: "Ritualist", stats: { messages: "450", level: "10", joins: "May 2024", activity: "High" } },
+    ritty: { id: DISCORD_CONFIG.roles.ritty, type: "ritty", name: "Ritty", stats: { messages: "120", level: "3", joins: "Aug 2024", activity: "Medium" } },
+    bitty: { id: DISCORD_CONFIG.roles.bitty, type: "bitty", name: "Bitty", stats: { messages: "45", level: "1", joins: "Oct 2024", activity: "Low" } },
   };
 
   const role = roleMap[roleType] || roleMap.ritualist;

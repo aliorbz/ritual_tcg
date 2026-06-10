@@ -460,7 +460,7 @@ export default function CardDetails() {
       // 1. Fetch live roles from Discord actions
       const data = await getDiscordUserRoles();
       
-      if (data.error && !data.role) {
+      if (data.error) {
         alert(`Discord verification failed: ${data.error}. Sync aborted.`);
         setIsSyncing(false);
         setSyncStep("idle");
@@ -512,7 +512,8 @@ export default function CardDetails() {
       });
 
       if (res.ok) {
-        setMetadata(updatedPayload);
+        const saved = await res.json();
+        setMetadata(saved.metadata || updatedPayload);
         alert("Successfully synced your live Discord stats and role on-chain and in metadata!");
       } else {
         alert("Successfully synced on-chain, but failed to write off-chain metadata files.");

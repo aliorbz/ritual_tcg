@@ -32,6 +32,94 @@ function getViemClient() {
   });
 }
 
+type StoredMetadata = {
+  name?: string;
+  discordId?: string;
+  discordRole?: string;
+  discordUsername?: string;
+  traits?: {
+    messageCount?: string;
+    level?: string;
+    topRole?: string;
+    activity?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+type ChainCardMetadata = {
+  discordId: string;
+  discordRole: string;
+  discordUsername: string;
+};
+
+const roleStats: Record<string, { messages: string; level: string; activity: string; joins: string }> = {
+  mod: { messages: "5.4k", level: "50", activity: "Master", joins: "Jan 2024" },
+  raiden: { messages: "1.2k", level: "25", activity: "Legendary", joins: "Feb 2024" },
+  ritualist: { messages: "450", level: "10", activity: "High", joins: "May 2024" },
+  ritty: { messages: "120", level: "3", activity: "Medium", joins: "Aug 2024" },
+  bitty: { messages: "45", level: "1", activity: "Low", joins: "Oct 2024" },
+  seeker: { messages: "0", level: "1", activity: "None", joins: "New" },
+};
+
+async function readChainCardMetadata(id: string): Promise<ChainCardMetadata | null> {
+  const client = getViemClient();
+  const rawMeta = await client.readContract({
+    address: CONTRACTS.NFT.address,
+    abi: CONTRACTS.NFT.abi,
+    functionName: "cardData",
+    args: [BigInt(id)],
+  }) as unknown;
+
+  if (!rawMeta) return null;
+
+  let discordId: string;
+  let discordRole: string;
+  let discordUsername: string;
+
+  if (Array.isArray(rawMeta)) {
+    [discordId, discordRole, discordUsername] = rawMeta as [string, string, string];
+  } else {
+    const meta = rawMeta as ChainCardMetadata;
+    discordId = meta.discordId;
+    discordRole = meta.discordRole;
+    discordUsername = meta.discordUsername;
+  }
+
+  if (!discordId) return null;
+
+  return { discordId, discordRole, discordUsername };
+}
+
+async function withLatestChainRole(id: string, metadata: StoredMetadata) {
+  try {
+    const chainMeta = await readChainCardMetadata(id);
+    if (!chainMeta) return metadata;
+
+    const roleType = (chainMeta.discordRole || "seeker").toLowerCase();
+    const stats = roleStats[roleType] || roleStats.seeker;
+    const oldUsername = metadata.discordUsername;
+
+    return {
+      ...metadata,
+      discordId: chainMeta.discordId,
+      discordRole: chainMeta.discordRole,
+      discordUsername: chainMeta.discordUsername,
+      name: !metadata.name || metadata.name === oldUsername ? chainMeta.discordUsername : metadata.name,
+      traits: {
+        ...metadata.traits,
+        messageCount: metadata.traits?.messageCount || stats.messages,
+        level: metadata.traits?.level || stats.level,
+        topRole: chainMeta.discordRole,
+        activity: metadata.traits?.activity || stats.activity,
+      },
+    };
+  } catch (err) {
+    console.error("On-chain metadata reconciliation failed:", err);
+    return metadata;
+  }
+}
+
 async function ensureDirectoryExists() {
   try {
     await fs.mkdir(METADATA_DIR, { recursive: true });
@@ -57,7 +145,7 @@ export async function GET(
         .single();
         
       if (!error && data && data.metadata) {
-        return NextResponse.json(data.metadata);
+        return NextResponse.json(await withLatestChainRole(id, data.metadata));
       }
     } catch (sbErr) {
       console.error("Supabase read failed:", sbErr);
@@ -70,7 +158,7 @@ export async function GET(
     if (res.ok) {
       const val = await res.json();
       if (val && typeof val === "object" && val.name) {
-        return NextResponse.json(val);
+        return NextResponse.json(await withLatestChainRole(id, val));
       }
     }
   } catch (kvErr) {
@@ -81,39 +169,24 @@ export async function GET(
     await ensureDirectoryExists();
     // 3. Try to read from local JSON database (development mode backup)
     const fileContent = await fs.readFile(filePath, "utf-8");
-    return NextResponse.json(JSON.parse(fileContent));
+    return NextResponse.json(await withLatestChainRole(id, JSON.parse(fileContent)));
   } catch (err) {
     // 4. Fallback: Query the blockchain
     try {
-      const client = getViemClient();
-      const rawMeta = await client.readContract({
-        address: CONTRACTS.NFT.address,
-        abi: CONTRACTS.NFT.abi,
-        functionName: "cardData",
-        args: [BigInt(id)],
-      }) as any;
+      const chainMeta = await readChainCardMetadata(id);
 
-      if (!rawMeta) {
+      if (!chainMeta) {
         return NextResponse.json({ error: "Token not found" }, { status: 404 });
       }
 
-      const discordId = Array.isArray(rawMeta) ? rawMeta[0] : rawMeta.discordId;
-      const discordRole = Array.isArray(rawMeta) ? rawMeta[1] : rawMeta.discordRole;
-      const discordUsername = Array.isArray(rawMeta) ? rawMeta[2] : rawMeta.discordUsername;
+      const { discordId, discordRole, discordUsername } = chainMeta;
 
       if (!discordId) {
         return NextResponse.json({ error: "Token has no metadata" }, { status: 404 });
       }
 
       const roleType = (discordRole || "ritualist").toLowerCase();
-      const mockStats: Record<string, any> = {
-        mod: { messages: "5.4k", level: "50", activity: "Master", joins: "Jan 2024" },
-        raiden: { messages: "1.2k", level: "25", activity: "Legendary", joins: "Feb 2024" },
-        ritualist: { messages: "450", level: "10", activity: "High", joins: "May 2024" },
-        ritty: { messages: "120", level: "3", activity: "Medium", joins: "Aug 2024" },
-        bitty: { messages: "45", level: "1", activity: "Low", joins: "Oct 2024" },
-      };
-      const stats = mockStats[roleType] || mockStats.ritualist;
+      const stats = roleStats[roleType] || roleStats.ritualist;
 
       // Construct a default metadata structure mirroring Discord identity
       const defaultMeta = {
